@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+vendor/
+.venv/
+venv/
+
+# Build output
+dist/
+build/
+coverage/
+out/
+target/
+.next/
+.nuxt/
+.vite/
+
+# Caches
+.cache/
+.turbo/
+.parcel-cache/
+.pytest_cache/
+.playwright/
+
+# Local config and secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Logs
+*.log
+logs/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db

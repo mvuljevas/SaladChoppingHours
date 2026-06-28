@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+vendor/
+.venv/
+venv/
+
+# Build output
+dist/
+build/
+coverage/
+out/
+target/
+.next/
+.nuxt/
+.vite/
+
+# Caches
+.cache/
+.turbo/
+.parcel-cache/
+.pytest_cache/
+.playwright/
+
+# Logs
+*.log
+logs/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+!.env.local.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Lockfiles: inspect only when dependency resolution matters
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+composer.lock
+Gemfile.lock
+
+# Generated assets
+*.min.js
+*.map
+*.snap
