@@ -237,3 +237,35 @@ Risks:
 Next suggested step:
 
 - Add anonymized parser fixtures and tests for interval reconstruction.
+
+## 2026-06-28 - Block 007: Real-Time Observability
+
+Branch:
+
+- `main`
+
+Current state:
+
+- The helper inspects Windows processes with CIM, Salad WSL distro state, helper
+  elevation, workload type, and parser coverage.
+- The dashboard has a Salad-inspired dark UI with Overview, Live Monitor,
+  Logs & Coverage, Machines, and Settings views.
+- A console monitor is available with `npm run monitor`.
+- Machine report export is available from `/salad/report`.
+- Version moved to `0.5.0`.
+
+Decisions:
+
+- Keep lifetime account totals separate from computed local 7-day history.
+- Use source, confidence, and coverage metadata on displayed Chopping values.
+- Request elevated helper through Windows UAC only when needed.
+
+Risks:
+
+- Multi-PC import is not implemented yet.
+- Workload classification and parser intervals still need validation against
+  more Salad sessions and workload types.
+
+Next suggested step:
+
+- Implement machine report import and combined multi-PC 7-day totals.

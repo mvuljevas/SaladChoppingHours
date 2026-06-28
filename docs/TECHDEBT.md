@@ -132,3 +132,22 @@ Resolution path:
 
 - Compare calculated intervals against known Salad sessions and refine parser
   boundaries with additional log sources when needed.
+
+## TD-008: Multi-PC Totals Need Import Workflow
+
+Status: open.
+
+Context:
+
+- The helper can export a local machine report, but the UI does not yet import a
+  second PC report or combine totals.
+
+Impact:
+
+- Users with multiple machines must read each machine separately until import
+  is implemented.
+
+Resolution path:
+
+- Add JSON import in the Machines view and compute combined 7-day totals from
+  local plus imported reports.

@@ -7,9 +7,10 @@ This file is the compact project summary for agents working in this repository.
 - Name: SaladChoppingHours.
 - Purpose: local web application for automatically calculating Salad Chopping
   hours and Star Chef qualification signals from a Salad installation folder.
-- Current version: 0.4.0.
+- Current version: 0.5.0.
 - Current phase: dashboard connected to a narrow read-only local helper with
-  Chopping-hour history calculated from miner log signals.
+  Chopping-hour history, Windows/WSL observability, live monitor, and machine
+  report export.
 
 ## Stack
 
@@ -86,6 +87,11 @@ git diff --check
   window endpoints.
 - `src/helper/choppingParser.js`: parser for mining signal intervals and daily
   Chopping-hour totals.
+- `src/helper/systemProbe.js`: Windows process, WSL, elevation, and machine
+  inspection.
+- `src/helper/workloadClassifier.js`: workload type/source/confidence
+  classification.
+- `src/helper/monitor.js`: console monitor for live helper observations.
 - `src/api/dashboard.js`: UI API adapter with helper/fallback behavior.
 - `src/data/sampleDashboard.js`: structured fallback values.
 - `docs/SNAPSHOTS.md`: chronological project memory.
@@ -104,6 +110,8 @@ git diff --check
 - Use the local helper for process status and log metadata.
 - Calculate Chopping-hour history from miner log `Mining at` signals when the
   helper is running.
+- Keep lifetime Salad totals separate from local 7-day computed history.
+- Use elevated helper only on demand when Windows hides observability details.
 - Plan for a local web app that can read Salad logs and detect running Salad
   processes without requiring an AI agent.
 
@@ -111,6 +119,7 @@ git diff --check
 
 - Helper process detection is heuristic and Windows-focused.
 - Parser currently uses miner log signals and a gap heuristic for intervals.
+- Multi-PC totals require exported reports from each machine.
 - Salad log formats and official Star Chef rules can change over time.
 
 ## Search Notes

@@ -67,3 +67,7 @@ The helper API should:
 - Log file discovery is bounded by scan depth and result count.
 - Chopping history parsing reads allowlisted miner logs under the configured
   Salad installation path and does not return raw log lines.
+- The live monitor prints summarized events only and redacts command-line user
+  values where possible.
+- The browser UI remains non-elevated; Windows UAC is requested only for the
+  helper when elevated process visibility is needed.

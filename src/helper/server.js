@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { calculateChoppingSummary } from "./choppingParser.js";
+import { inspectSystem, requestElevatedHelper } from "./systemProbe.js";
+import { classifyWorkload, isMinerPath } from "./workloadClassifier.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -35,6 +37,8 @@ const workloadProcessHints = [
   "salad.bowl.service",
   "salad-bowl-service",
 ];
+const sseClients = new Set();
+let lastEventSignature = "";
 
 const server = createServer(async (request, response) => {
   const origin = request.headers.origin;
@@ -90,13 +94,34 @@ async function routeRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/salad/workload/current") {
+    sendJson(response, 200, await getCurrentWorkload());
+    return;
+  }
+
   if (url.pathname === "/salad/logs") {
     sendJson(response, 200, { installPath, logs: await listLogFiles() });
     return;
   }
 
   if (url.pathname === "/salad/chopping-history") {
-    sendJson(response, 200, await getChoppingHistory());
+    const days = Number.parseInt(url.searchParams.get("days") ?? "7", 10);
+    sendJson(response, 200, await getChoppingHistory({ days }));
+    return;
+  }
+
+  if (url.pathname === "/salad/report") {
+    sendJson(response, 200, await getMachineReport());
+    return;
+  }
+
+  if (url.pathname === "/salad/elevate") {
+    sendJson(response, 200, await requestElevatedHelper());
+    return;
+  }
+
+  if (url.pathname === "/salad/events") {
+    await handleEvents(response);
     return;
   }
 
@@ -110,7 +135,44 @@ async function routeRequest(request, response) {
   sendJson(response, 404, { error: "Not found" });
 }
 
-async function getChoppingHistory() {
+async function getMachineReport() {
+  const [status, history, workload, logs, system] = await Promise.all([
+    getSaladStatus(),
+    getChoppingHistory({ days: 7 }),
+    getCurrentWorkload(),
+    listLogFiles(),
+    inspectSystem(),
+  ]);
+
+  return {
+    exportedAt: new Date().toISOString(),
+    machine: system.machine,
+    status,
+    workload,
+    choppingHistory: history,
+    logs: {
+      count: logs.length,
+      newest: logs[0]?.modifiedAt ?? null,
+      oldest: logs.at(-1)?.modifiedAt ?? null,
+    },
+  };
+}
+
+async function getCurrentWorkload() {
+  const [logs, history, system] = await Promise.all([
+    listLogFiles(),
+    getChoppingHistory({ days: 7, includeSystem: false }),
+    inspectSystem(),
+  ]);
+
+  return classifyWorkload({
+    logs,
+    system,
+    lastSignalAt: history.lastSignalAt,
+  });
+}
+
+async function getChoppingHistory({ days = 7 } = {}) {
   const logs = await listLogFiles();
   const minerLogs = logs.filter((log) => isMinerLog(log.relativePath));
   const logWindows = [];
@@ -138,35 +200,60 @@ async function getChoppingHistory() {
   }
 
   return {
+    machineId: (await inspectSystem()).machine.id,
     installPath,
+    days,
     parsedLogs: logWindows.length,
     skippedLogs: minerLogs.length - logWindows.length,
-    ...calculateChoppingSummary(logWindows),
+    coverage: buildCoverage(logs, logWindows),
+    ...calculateChoppingSummary(logWindows, new Date(), days),
   };
 }
 
 async function getSaladStatus() {
   const installPathExists = await pathExists(installPath);
-  const processes = await listProcesses();
+  const system = await inspectSystem();
+  const processes = system.windowsProcesses.map((process) => process.name);
   const detectedProcess = processes.find((processName) =>
     saladProcessNames.has(processName.toLowerCase()),
+  );
+  const detectedService = processes.find(
+    (processName) => processName.toLowerCase() === "salad.bowl.service.exe",
   );
   const detectedWorkload = processes.find((processName) =>
     workloadProcessHints.some((hint) => processName.toLowerCase().includes(hint)),
   );
   const logs = installPathExists ? await listLogFiles() : [];
+  const history = installPathExists
+    ? await getChoppingHistory({ days: 7, includeSystem: false })
+    : null;
+  const workload = classifyWorkload({
+    logs,
+    system,
+    lastSignalAt: history?.lastSignalAt ?? null,
+  });
 
   return {
     installPath,
     installPathExists,
+    machine: system.machine,
+    elevation: system.elevation,
+    wsl: system.wsl,
     process: {
       label: detectedProcess ? "Active" : "Not detected",
       state: detectedProcess ? "active" : "inactive",
       detected: Boolean(detectedProcess),
       match: detectedProcess ?? null,
     },
+    service: {
+      label: detectedService ? "Bowl service active" : "Bowl service not detected",
+      state: detectedService ? "active" : "inactive",
+      detected: Boolean(detectedService),
+      match: detectedService ?? null,
+    },
     workload: {
-      label: detectedWorkload ? "Possible workload" : "Unknown",
+      ...workload,
+      label: detectedWorkload ? workload.label : workload.label,
       state: detectedWorkload ? "active" : "unknown",
       detected: Boolean(detectedWorkload),
       match: detectedWorkload ?? null,
@@ -314,12 +401,74 @@ function decodeLogId(id) {
 }
 
 function isMinerLog(relativePath) {
-  const normalizedPath = relativePath.toLowerCase();
-  return (
-    normalizedPath.includes(`${path.sep.toLowerCase()}t-rex${path.sep.toLowerCase()}`) ||
-    normalizedPath.includes(`${path.sep.toLowerCase()}rigel${path.sep.toLowerCase()}`)
-  );
+  return isMinerPath(relativePath);
 }
+
+function buildCoverage(logs, logWindows) {
+  return {
+    logCount: logs.length,
+    parsedLogCount: logWindows.length,
+    newestLogAt: logs[0]?.modifiedAt ?? null,
+    oldestLogAt: logs.at(-1)?.modifiedAt ?? null,
+    retentionNote:
+      "Salad job logs are local and may be retained for a limited window; combine reports from each PC for multi-machine totals.",
+  };
+}
+
+async function handleEvents(response) {
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-store",
+    Connection: "keep-alive",
+  });
+
+  sseClients.add(response);
+  response.write(`event: hello\ndata: ${JSON.stringify({ ok: true })}\n\n`);
+
+  response.on("close", () => {
+    sseClients.delete(response);
+  });
+}
+
+async function publishObservationEvent() {
+  if (sseClients.size === 0) {
+    return;
+  }
+
+  const [status, workload, history] = await Promise.all([
+    getSaladStatus(),
+    getCurrentWorkload(),
+    getChoppingHistory({ days: 7 }),
+  ]);
+  const payload = {
+    observedAt: new Date().toISOString(),
+    process: status.process,
+    service: status.service,
+    wsl: status.wsl?.saladDistro,
+    workload,
+    parser: {
+      totalHours: history.totalHours,
+      signalCount: history.signalCount,
+      intervalCount: history.intervalCount,
+      lastSignalAt: history.lastSignalAt,
+    },
+  };
+  const signature = JSON.stringify(payload);
+
+  if (signature === lastEventSignature) {
+    return;
+  }
+
+  lastEventSignature = signature;
+
+  for (const client of sseClients) {
+    client.write(`event: observation\ndata: ${JSON.stringify(payload)}\n\n`);
+  }
+}
+
+setInterval(() => {
+  publishObservationEvent().catch(() => {});
+}, 3000);
 
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {

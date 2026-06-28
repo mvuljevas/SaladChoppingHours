@@ -4,17 +4,24 @@ const miningSignalPattern = /\bMining at\b/i;
 const defaultSampleSeconds = 30;
 const maxSignalGapSeconds = 120;
 
-export function calculateChoppingSummary(logWindows, now = new Date()) {
+export function calculateChoppingSummary(logWindows, now = new Date(), days = 7) {
   const signals = collectMiningSignals(logWindows);
   const intervals = buildIntervals(signals);
-  const history = buildLastSevenDays(intervals, now);
+  const history = buildHistory(intervals, now, days);
   const totalHours = history.reduce((total, item) => total + item.hours, 0);
 
   return {
     source: signals.length > 0 ? "logs" : "none",
+    confidence: signals.length > 0 ? "confirmed" : "low-confidence",
     signalCount: signals.length,
     intervalCount: intervals.length,
     totalHours: roundHours(totalHours),
+    intervals: intervals.map((interval) => ({
+      start: interval.start.toISOString(),
+      end: interval.end.toISOString(),
+      hours: roundHours((interval.end - interval.start) / 3600000),
+      confidence: interval.confidence,
+    })),
     history,
     lastSignalAt: signals.at(-1)?.timestamp.toISOString() ?? null,
   };
@@ -63,22 +70,22 @@ function buildIntervals(signals) {
     const gapSeconds = (signal.timestamp - end) / 1000;
 
     if (gapSeconds > maxSignalGapSeconds) {
-      intervals.push({ start, end });
+      intervals.push({ start, end, confidence: "confirmed" });
       start = signal.timestamp;
     }
 
     end = addSeconds(signal.timestamp, defaultSampleSeconds);
   }
 
-  intervals.push({ start, end });
+  intervals.push({ start, end, confidence: "confirmed" });
   return intervals;
 }
 
-function buildLastSevenDays(intervals, now) {
+function buildHistory(intervals, now, dayCount) {
   const days = [];
   const todayStart = startOfLocalDay(now);
 
-  for (let offset = 6; offset >= 0; offset -= 1) {
+  for (let offset = dayCount - 1; offset >= 0; offset -= 1) {
     const dayStart = addDays(todayStart, -offset);
     const dayEnd = addDays(dayStart, 1);
     const seconds = intervals.reduce(

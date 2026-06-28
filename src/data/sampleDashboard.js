@@ -13,15 +13,35 @@ export const sampleChoppingHistory = [
 export const sampleStatus = {
   installPath: "C:\\ProgramData\\Salad",
   installPathExists: null,
+  machine: {
+    id: "sample-machine",
+    hostname: "This PC",
+    platform: "win32",
+  },
+  elevation: {
+    isAdmin: false,
+    level: "medium",
+    needsElevation: false,
+  },
+  wsl: {
+    saladDistro: {
+      name: "salad-enterprise-linux",
+      state: "Unknown",
+      running: false,
+    },
+  },
   process: {
     label: "Sample active",
     state: "sample",
     detected: true,
   },
   workload: {
+    type: "sample",
     label: "Sample working",
     state: "sample",
     detected: true,
+    confidence: "sample",
+    source: "sample",
   },
   lastLogRead: "Sample data",
 };
@@ -56,11 +76,22 @@ export const sampleDashboard = {
   choppingHistory: sampleChoppingHistory,
   choppingSummary: {
     source: "sample",
+    confidence: "sample",
     signalCount: 0,
     intervalCount: 0,
     totalHours: sampleChoppingHistory.reduce((total, item) => total + item.hours, 0),
     lastSignalAt: null,
+    coverage: {
+      logCount: 0,
+      parsedLogCount: 0,
+      newestLogAt: null,
+      oldestLogAt: null,
+      retentionNote: "Start the helper to calculate local coverage.",
+    },
+    intervals: [],
   },
+  workload: sampleStatus.workload,
+  report: null,
   recentEvents: sampleRecentEvents,
   logs: [],
 };

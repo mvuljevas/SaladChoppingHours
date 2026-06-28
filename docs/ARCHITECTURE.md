@@ -61,6 +61,10 @@ GET /health
 GET /salad/status
 GET /salad/logs
 GET /salad/chopping-history
+GET /salad/workload/current
+GET /salad/events
+GET /salad/report
+GET /salad/elevate
 GET /salad/logs/:id/window
 ```
 

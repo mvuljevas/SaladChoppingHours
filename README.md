@@ -20,6 +20,10 @@ log metadata, read bounded log windows, and calculate recent Chopping-hour
 history from miner log signals. The dashboard falls back to structured sample
 data when the helper is not running.
 
+The dashboard separates local 7-day Chopping history from Salad lifetime totals.
+Displayed hour values include source, confidence, and coverage context so
+partial local logs are not presented as complete account history.
+
 ## Requirements
 
 - Node.js 22 or newer.
@@ -44,6 +48,12 @@ metadata:
 npm run helper
 ```
 
+Watch local process, WSL, workload, and parser observations in a console:
+
+```bash
+npm run monitor
+```
+
 Optional helper configuration:
 
 ```powershell
@@ -56,6 +66,7 @@ npm run helper
 
 ```bash
 npm run build
+npm test
 ```
 
 ## Planned Product Scope

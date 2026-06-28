@@ -46,4 +46,4 @@ Status: started.
 - Add local run instructions.
 - Decide whether to package as PWA, desktop wrapper, or local service.
 
-Status: planned.
+Status: started.

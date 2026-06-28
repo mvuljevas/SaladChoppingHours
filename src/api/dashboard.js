@@ -4,11 +4,13 @@ const helperBaseUrl = import.meta.env.VITE_HELPER_URL ?? "http://127.0.0.1:48173
 
 export async function loadDashboardData() {
   try {
-    const [health, status, logs, history] = await Promise.all([
+    const [health, status, logs, history, workload, report] = await Promise.all([
       fetchJson("/health"),
       fetchJson("/salad/status"),
       fetchJson("/salad/logs"),
       fetchJson("/salad/chopping-history"),
+      fetchJson("/salad/workload/current"),
+      fetchJson("/salad/report"),
     ]);
 
     return {
@@ -16,10 +18,12 @@ export async function loadDashboardData() {
       source: "helper",
       helperOnline: health.ok === true,
       status: normalizeStatus(status),
+      workload,
       choppingHistory: history.history?.length
         ? history.history
         : sampleDashboard.choppingHistory,
       choppingSummary: history,
+      report,
       recentEvents: buildRecentEvents(status, logs.logs ?? [], history),
       logs: logs.logs ?? [],
     };
@@ -29,6 +33,27 @@ export async function loadDashboardData() {
       error: error instanceof Error ? error.message : "Helper unavailable",
     };
   }
+}
+
+export function subscribeToEvents(onEvent) {
+  const eventSource = new EventSource(`${helperBaseUrl}/salad/events`);
+  eventSource.addEventListener("observation", (event) => {
+    onEvent(JSON.parse(event.data));
+  });
+
+  eventSource.onerror = () => {
+    onEvent({
+      observedAt: new Date().toISOString(),
+      source: "helper",
+      message: "Live stream disconnected",
+    });
+  };
+
+  return () => eventSource.close();
+}
+
+export async function requestElevatedHelper() {
+  return fetchJson("/salad/elevate");
 }
 
 async function fetchJson(path) {
@@ -59,6 +84,14 @@ function normalizeStatus(status) {
       state: "unknown",
       detected: false,
     },
+    service: status.service ?? {
+      label: "Unknown",
+      state: "unknown",
+      detected: false,
+    },
+    machine: status.machine ?? sampleDashboard.status.machine,
+    elevation: status.elevation ?? sampleDashboard.status.elevation,
+    wsl: status.wsl ?? sampleDashboard.status.wsl,
     lastLogRead: status.lastLogRead ?? "No logs read",
   };
 }
