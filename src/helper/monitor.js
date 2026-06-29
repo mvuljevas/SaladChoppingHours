@@ -1,3 +1,16 @@
+import { fileURLToPath } from "node:url";
+import { ensureElevatedProcess } from "./elevation.js";
+
+if (
+  await ensureElevatedProcess({
+    argv: [fileURLToPath(import.meta.url), ...process.argv.slice(2)],
+    label: "SaladChoppingHours elevated monitor",
+  })
+) {
+  process.stdout.write("Requested elevated SaladChoppingHours monitor through Windows UAC.\n");
+  process.exit(0);
+}
+
 const helperBaseUrl = process.env.SALAD_HELPER_URL ?? "http://127.0.0.1:48173";
 const pollMs = Number.parseInt(process.env.SALAD_MONITOR_POLL_MS ?? "3000", 10);
 

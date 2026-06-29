@@ -1,10 +1,12 @@
 import { createServer } from "node:http";
 import { access, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   calculateChoppingSummary,
   calculateLogActivitySummary,
 } from "./choppingParser.js";
+import { ensureElevatedProcess } from "./elevation.js";
 import { getMaxOptimizationPlan, inspectRig } from "./rigProfile.js";
 import { inspectSystem, requestElevatedHelper } from "./systemProbe.js";
 import { classifyWorkload } from "./workloadClassifier.js";
@@ -39,6 +41,21 @@ const workloadProcessHints = [
 const sseClients = new Set();
 let lastEventSignature = "";
 const historyCache = new Map();
+
+if (
+  await ensureElevatedProcess({
+    argv: [fileURLToPath(import.meta.url), ...process.argv.slice(2)],
+    label: "SaladChoppingHours elevated helper",
+    relaunchEnv: {
+      SALAD_HELPER_HOST: host,
+      SALAD_HELPER_PORT: String(port),
+      SALAD_INSTALL_PATH: installPath,
+    },
+  })
+) {
+  process.stdout.write("Requested elevated SaladChoppingHours helper through Windows UAC.\n");
+  process.exit(0);
+}
 
 const server = createServer(async (request, response) => {
   const origin = request.headers.origin;

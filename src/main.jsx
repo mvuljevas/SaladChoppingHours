@@ -566,11 +566,12 @@ function Settings({ status, onElevate }) {
         </StatusBadge>
       </div>
       <p className="body-copy">
-        The UI stays non-elevated. If Windows hides process paths, WSL details, or
-        service metadata, relaunch only the helper through UAC.
+        On Windows, the local suite and helper are expected to run elevated so
+        Salad process paths, WSL details, service metadata, and hardware state
+        stay visible. If this session is not elevated, request UAC relaunch.
       </p>
       <button className="primary-button" type="button" onClick={onElevate}>
-        Run helper as administrator
+        Relaunch helper as administrator
       </button>
     </section>
   );

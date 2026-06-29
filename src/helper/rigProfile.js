@@ -144,11 +144,11 @@ export function buildOptimizationPlan(profile) {
   if (!profile.elevation?.isAdmin) {
     actions.push({
       id: "elevated-helper",
-      title: "Use elevated helper only when observability is incomplete",
+      title: "Run the suite elevated on Windows",
       status: "optional",
       impact: "medium",
       detail:
-        "Current helper is not elevated. Elevation can expose process paths and service metadata, but the UI should stay non-elevated.",
+        "Current process is not elevated. Start the local suite through UAC so UI, helper, and monitor share the same administrator context.",
       apply: {
         automatic: false,
         reason: "UAC prompt must be user-triggered.",

@@ -89,6 +89,11 @@ SALAD_HELPER_PORT
 SALAD_INSTALL_PATH
 ```
 
+On Windows, the suite, helper, and monitor request UAC relaunch before opening
+ports when the current process is not elevated. This keeps Salad process, WSL,
+service, and hardware observability in one administrator context while still
+binding the helper to localhost.
+
 ## Deferred Decisions
 
 - Whether to package the app as a desktop application.

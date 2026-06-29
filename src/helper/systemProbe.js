@@ -1,7 +1,9 @@
 import { execFile } from "node:child_process";
 import crypto from "node:crypto";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { inspectElevation, relaunchElevatedNode } from "./elevation.js";
 
 const execFileAsync = promisify(execFile);
 const saladWslDistro = "salad-enterprise-linux";
@@ -26,22 +28,15 @@ export async function inspectSystem() {
 }
 
 export async function requestElevatedHelper() {
-  const script = [
-    "$env:SALAD_INSTALL_PATH = $env:SALAD_INSTALL_PATH",
-    "$env:SALAD_HELPER_PORT = $env:SALAD_HELPER_PORT",
-    "npm run helper",
-  ].join("; ");
-  const cwd = process.cwd().replaceAll("'", "''");
-
-  await execFileAsync(
-    "powershell.exe",
-    [
-      "-NoProfile",
-      "-Command",
-      `Start-Process -Verb RunAs -WorkingDirectory '${cwd}' -FilePath powershell.exe -ArgumentList '-NoProfile','-NoExit','-Command','${script.replaceAll("'", "''")}'`,
-    ],
-    { windowsHide: true },
-  );
+  await relaunchElevatedNode({
+    argv: [fileURLToPath(new URL("./server.js", import.meta.url))],
+    label: "SaladChoppingHours elevated helper",
+    relaunchEnv: {
+      SALAD_HELPER_HOST: process.env.SALAD_HELPER_HOST ?? "127.0.0.1",
+      SALAD_HELPER_PORT: process.env.SALAD_HELPER_PORT ?? "48173",
+      SALAD_INSTALL_PATH: process.env.SALAD_INSTALL_PATH ?? "C:\\ProgramData\\Salad",
+    },
+  });
 
   return { requested: true };
 }
@@ -187,36 +182,6 @@ async function listWslProcesses(distroName) {
       });
   } catch {
     return [];
-  }
-}
-
-async function inspectElevation() {
-  if (os.platform() !== "win32") {
-    return { isAdmin: false, level: "unknown", needsElevation: false };
-  }
-
-  try {
-    const { stdout } = await execFileAsync("whoami", ["/groups"], {
-      windowsHide: true,
-      maxBuffer: 1024 * 1024,
-    });
-    const normalizedOutput = stdout.toLowerCase();
-
-    const isAdmin =
-      normalizedOutput.includes("s-1-5-32-544") && !normalizedOutput.includes("deny only");
-    const level = normalizedOutput.includes("s-1-16-12288")
-      ? "high"
-      : normalizedOutput.includes("s-1-16-8192")
-        ? "medium"
-        : "unknown";
-
-    return {
-      isAdmin,
-      level,
-      needsElevation: !isAdmin,
-    };
-  } catch {
-    return { isAdmin: false, level: "unknown", needsElevation: true };
   }
 }
 

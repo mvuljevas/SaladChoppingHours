@@ -57,7 +57,10 @@ npm run suite
 ```
 
 This starts the Vite UI, the read-only helper, and the live monitor together.
-Use `Ctrl+C` in that terminal to stop all three.
+On Windows, the suite checks administrator status before opening ports. If the
+current terminal is not elevated, it requests a native UAC relaunch and runs the
+UI, helper, and monitor from the elevated process. Use `Ctrl+C` in the elevated
+terminal to stop all three.
 
 ```bash
 npm run dev
@@ -70,11 +73,17 @@ metadata:
 npm run helper
 ```
 
+On Windows, the helper also requests UAC relaunch when started from a
+non-elevated terminal.
+
 Watch local process, WSL, workload, and parser observations in a console:
 
 ```bash
 npm run monitor
 ```
+
+On Windows, the standalone monitor also requests UAC relaunch so it runs in the
+same elevated context as the rest of the local suite.
 
 If you only want the UI and helper without console monitoring:
 

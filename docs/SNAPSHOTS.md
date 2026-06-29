@@ -412,3 +412,39 @@ Next suggested step:
 
 - Add explicit, reversible apply flows for selected optimization actions,
   beginning with Windows power-plan switching.
+
+## 2026-06-28 - Block 012: Windows Elevated Suite Relaunch
+
+Branch:
+
+- `main`
+
+Current state:
+
+- `npm run suite` requests a native Windows UAC relaunch when the current
+  process is not elevated, then starts Vite, helper, and monitor from the
+  elevated process.
+- `npm run helper` and `npm run monitor` also request UAC relaunch when started
+  standalone on Windows.
+- Elevation detection and relaunch logic is centralized in
+  `src/helper/elevation.js`.
+- Version moved to `0.8.1`.
+
+Decisions:
+
+- Prefer one elevated local suite context on Windows so UI, helper, and monitor
+  see the same Salad process, WSL, service, and hardware state.
+- Keep UAC visible and user-approved; commands are launched programmatically but
+  Windows consent is not bypassed.
+
+Risks:
+
+- The elevated process opens a separate administrator PowerShell window so the
+  user has a visible place to stop the suite with `Ctrl+C`.
+- Future packaged builds should replace the dev PowerShell relaunch with a
+  native app manifest or installer-level elevation strategy.
+
+Next suggested step:
+
+- Add a packaged Windows launch strategy once the app moves beyond the dev
+  suite.

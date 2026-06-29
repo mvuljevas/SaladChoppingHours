@@ -69,5 +69,7 @@ The helper API should:
   Salad installation path and does not return raw log lines.
 - The live monitor prints summarized events only and redacts command-line user
   values where possible.
-- The browser UI remains non-elevated; Windows UAC is requested only for the
-  helper when elevated process visibility is needed.
+- On Windows, the development suite relaunches through UAC when needed so the
+  UI dev server, helper, and monitor run in one administrator context.
+- Elevated execution is still local-only: the helper remains bound to localhost
+  and the API stays purpose-built for Salad inspection.

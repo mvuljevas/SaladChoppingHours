@@ -1,5 +1,18 @@
+import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import "../helper/server.js";
+import { ensureElevatedProcess } from "../helper/elevation.js";
+
+if (
+  await ensureElevatedProcess({
+    argv: [fileURLToPath(import.meta.url), ...process.argv.slice(2)],
+    label: "SaladChoppingHours elevated suite",
+  })
+) {
+  process.stdout.write("Requested elevated SaladChoppingHours suite through Windows UAC.\n");
+  process.exit(0);
+}
+
+await import("../helper/server.js");
 
 process.stdout.write("Starting SaladChoppingHours local suite...\n");
 process.stdout.write("Helper: http://127.0.0.1:48173/health\n");
