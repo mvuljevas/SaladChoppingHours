@@ -7,11 +7,12 @@ This file is the compact project summary for agents working in this repository.
 - Name: SaladChoppingHours.
 - Purpose: local web application for automatically calculating Salad Chopping
   hours and Star Chef qualification signals from a Salad installation folder.
-- Current version: 0.7.1.
+- Current version: 0.8.0.
 - Current phase: dashboard connected to a narrow read-only local helper with
   Chopping-hour history, Windows/WSL observability, live monitor, machine report
   export, one-command local suite orchestration, explicit empty offline states,
-  a terminal-style live monitor, and all-readable-log scan coverage.
+  a terminal-style live monitor, all-readable-log scan coverage, and rig
+  hardware/runtime readiness inspection.
 
 ## Stack
 
@@ -99,6 +100,8 @@ git diff --check
 - `src/helper/workloadClassifier.js`: workload type/source/confidence
   classification.
 - `src/helper/monitor.js`: console monitor for live helper observations.
+- `src/helper/rigProfile.js`: rig hardware, Windows, WSL, Salad, GPU, power, and
+  max-availability optimization plan inspection.
 - `src/dev/suite.js`: one-command supervisor for UI, helper, and monitor.
 - `src/api/dashboard.js`: UI API adapter with helper and explicit offline
   empty-state behavior.
@@ -123,6 +126,8 @@ git diff --check
   coverage counts for found, scanned, signal-bearing, and unreadable logs.
 - Expose inferred rig log activity from all Salad log modification timestamps,
   separately from confirmed Chopping intervals.
+- Inspect rig configuration and generate advisory max-availability optimization
+  actions without changing Windows, WSL, NVIDIA, or Salad automatically.
 - Keep lifetime Salad totals separate from local 7-day computed history.
 - Show last-24-hours, rolling-7-days, and estimated Star Chef progress as
   separate values.

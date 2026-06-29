@@ -38,6 +38,7 @@ Status: started.
 - Show Chopping totals, last-24-hours, rolling-7-days, and qualification
   estimate.
 - Show source log window and terminal-style live events.
+- Show rig hardware/runtime readiness and max-availability optimization advice.
 
 Status: started.
 

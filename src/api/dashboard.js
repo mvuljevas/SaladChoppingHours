@@ -2,6 +2,7 @@ import {
   emptyChoppingSummary,
   emptyDashboard,
   emptyLogActivitySummary,
+  emptyRig,
   emptyStatus,
 } from "../data/emptyDashboard.js";
 
@@ -9,13 +10,14 @@ const helperBaseUrl = import.meta.env.VITE_HELPER_URL ?? "http://127.0.0.1:48173
 
 export async function loadDashboardData() {
   try {
-    const [health, status, logs, history, workload, report] = await Promise.all([
+    const [health, status, logs, history, workload, report, rig] = await Promise.all([
       fetchJson("/health"),
       fetchJson("/salad/status"),
       fetchJson("/salad/logs"),
       fetchJson("/salad/chopping-history"),
       fetchJson("/salad/workload/current"),
       fetchJson("/salad/report"),
+      fetchJson("/salad/rig/config"),
     ]);
 
     const choppingSummary = normalizeChoppingSummary(history);
@@ -29,6 +31,7 @@ export async function loadDashboardData() {
       choppingHistory: history.history ?? [],
       choppingSummary,
       logActivity: normalizeLogActivity(history.logActivity),
+      rig: normalizeRig(rig),
       report,
       recentEvents: buildRecentEvents(status, logs.logs ?? [], choppingSummary),
       logs: logs.logs ?? [],
@@ -60,6 +63,10 @@ export function subscribeToEvents(onEvent) {
 
 export async function requestElevatedHelper() {
   return fetchJson("/salad/elevate");
+}
+
+export async function requestRigOptimizationPlan() {
+  return fetchJson("/salad/rig/optimize");
 }
 
 async function fetchJson(path) {
@@ -99,6 +106,47 @@ function normalizeChoppingSummary(history) {
     },
     intervals: history.intervals ?? emptyChoppingSummary.intervals,
     history: history.history ?? emptyChoppingSummary.history,
+  };
+}
+
+function normalizeRig(rig) {
+  return {
+    ...emptyRig,
+    ...(rig ?? {}),
+    windows: {
+      ...emptyRig.windows,
+      ...(rig?.windows ?? {}),
+    },
+    cpu: {
+      ...emptyRig.cpu,
+      ...(rig?.cpu ?? {}),
+    },
+    memory: {
+      ...emptyRig.memory,
+      ...(rig?.memory ?? {}),
+    },
+    virtualization: {
+      ...emptyRig.virtualization,
+      ...(rig?.virtualization ?? {}),
+    },
+    power: {
+      ...emptyRig.power,
+      ...(rig?.power ?? {}),
+    },
+    salad: {
+      ...emptyRig.salad,
+      ...(rig?.salad ?? {}),
+    },
+    elevation: {
+      ...emptyRig.elevation,
+      ...(rig?.elevation ?? {}),
+    },
+    optimization: {
+      ...emptyRig.optimization,
+      ...(rig?.optimization ?? {}),
+      actions: rig?.optimization?.actions ?? emptyRig.optimization.actions,
+    },
+    gpus: rig?.gpus ?? emptyRig.gpus,
   };
 }
 

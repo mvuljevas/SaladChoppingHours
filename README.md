@@ -33,6 +33,9 @@ signals, and unreadable logs.
 The dashboard also shows inferred rig log activity from all Salad log
 timestamps. This helps explain local rig activity without counting it as
 confirmed Star Chef progress unless recognized Chopping signals are present.
+The Rig view inspects Windows, WSL, CPU, memory, GPU, power plan, Salad
+processes, and helper elevation, then generates a maximum-availability
+optimization plan without applying system changes automatically.
 
 ## Requirements
 
@@ -99,6 +102,7 @@ npm test
 - Read Salad logs and configuration from the local installation directory.
 - Detect whether Salad and its workload service are currently running.
 - Reconstruct Chopping intervals from local Salad miner log signals.
+- Inspect local rig hardware and runtime readiness for Salad jobs.
 - Compare totals against the official Star Chef threshold.
 - Present results in a local web interface without requiring an AI agent.
 

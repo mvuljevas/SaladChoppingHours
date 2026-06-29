@@ -89,6 +89,54 @@ export const emptyLogActivitySummary = {
     "Start the local helper to infer local rig/app activity from Salad log metadata.",
 };
 
+export const emptyRig = {
+  inspectedAt: null,
+  machine: emptyStatus.machine,
+  windows: {
+    name: "unknown",
+    version: null,
+    architecture: "unknown",
+    manufacturer: "unknown",
+    model: "unknown",
+  },
+  cpu: {
+    name: "unknown",
+    cores: null,
+    logicalProcessors: null,
+    maxClockMhz: null,
+  },
+  memory: {
+    totalBytes: 0,
+    totalGb: 0,
+  },
+  virtualization: {
+    hypervisorPresent: false,
+    wslAvailable: false,
+    saladDistro: emptyStatus.wsl.saladDistro,
+    wslProcesses: 0,
+  },
+  gpus: [],
+  power: {
+    guid: null,
+    name: "unknown",
+    source: "unknown",
+  },
+  salad: {
+    appDetected: false,
+    serviceDetected: false,
+    processCount: 0,
+    workloadProcessCount: 0,
+    processes: [],
+    workloadProcesses: [],
+  },
+  elevation: emptyStatus.elevation,
+  optimization: {
+    score: 0,
+    summary: "Start the helper to inspect this rig.",
+    actions: [],
+  },
+};
+
 export const emptyDashboard = {
   source: "offline",
   helperOnline: false,
@@ -96,6 +144,8 @@ export const emptyDashboard = {
   choppingHistory: [],
   choppingSummary: emptyChoppingSummary,
   logActivity: emptyLogActivitySummary,
+  rig: emptyRig,
+  optimizationPlan: null,
   workload: emptyStatus.workload,
   report: null,
   recentEvents: [],

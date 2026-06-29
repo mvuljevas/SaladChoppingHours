@@ -5,6 +5,7 @@ import {
   calculateChoppingSummary,
   calculateLogActivitySummary,
 } from "./choppingParser.js";
+import { getMaxOptimizationPlan, inspectRig } from "./rigProfile.js";
 import { inspectSystem, requestElevatedHelper } from "./systemProbe.js";
 import { classifyWorkload } from "./workloadClassifier.js";
 
@@ -99,6 +100,8 @@ async function routeRequest(request, response) {
         "/salad/logs",
         "/salad/chopping-history?days=7",
         "/salad/workload/current",
+        "/salad/rig/config",
+        "/salad/rig/optimize",
         "/salad/events",
         "/salad/report",
         "/salad/elevate",
@@ -114,6 +117,16 @@ async function routeRequest(request, response) {
 
   if (url.pathname === "/salad/workload/current") {
     sendJson(response, 200, await getCurrentWorkload());
+    return;
+  }
+
+  if (url.pathname === "/salad/rig/config") {
+    sendJson(response, 200, await inspectRig());
+    return;
+  }
+
+  if (url.pathname === "/salad/rig/optimize") {
+    sendJson(response, 200, await getMaxOptimizationPlan());
     return;
   }
 

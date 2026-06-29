@@ -3,22 +3,25 @@ import { createRoot } from "react-dom/client";
 import {
   loadDashboardData,
   requestElevatedHelper,
+  requestRigOptimizationPlan,
   subscribeToEvents,
 } from "./api/dashboard.js";
 import { emptyDashboard, starChefTargetHours } from "./data/emptyDashboard.js";
 import "./styles.css";
 
-const tabs = ["Overview", "Live Monitor", "Coverage", "Machines", "Settings"];
+const tabs = ["Overview", "Rig", "Live Monitor", "Coverage", "Machines", "Settings"];
 
 function App() {
   const [dashboard, setDashboard] = useState(emptyDashboard);
   const [activeTab, setActiveTab] = useState("Overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
   const [liveEvents, setLiveEvents] = useState([]);
   const {
     choppingHistory,
     choppingSummary,
     logActivity,
+    rig,
     status,
     workload,
     source,
@@ -46,6 +49,26 @@ function App() {
         message: "Requested elevated helper through Windows UAC.",
       },
     ]);
+  }
+
+  async function optimizeRig() {
+    setIsOptimizing(true);
+    const plan = await requestRigOptimizationPlan();
+    setDashboard((currentDashboard) => ({
+      ...currentDashboard,
+      optimizationPlan: plan,
+      rig: plan.rig ?? currentDashboard.rig,
+    }));
+    setLiveEvents((events) => [
+      ...events,
+      {
+        observedAt: new Date().toISOString(),
+        source: "rig",
+        level: "info",
+        message: "Generated maximum availability optimization plan.",
+      },
+    ]);
+    setIsOptimizing(false);
   }
 
   useEffect(() => {
@@ -121,6 +144,15 @@ function App() {
           summary={choppingSummary}
           logActivity={logActivity}
           workload={workload}
+        />
+      ) : null}
+
+      {activeTab === "Rig" ? (
+        <Rig
+          isOptimizing={isOptimizing}
+          onOptimize={optimizeRig}
+          plan={dashboard.optimizationPlan}
+          rig={rig}
         />
       ) : null}
 
@@ -281,6 +313,149 @@ function LiveMonitor({ events, source }) {
         )}
       </div>
     </section>
+  );
+}
+
+function Rig({ isOptimizing, onOptimize, plan, rig }) {
+  const primaryGpu = rig.gpus.find((gpu) => gpu.vendor === "nvidia") ?? rig.gpus[0];
+
+  return (
+    <>
+      <section className="metric-grid" aria-label="Rig readiness">
+        <MetricCard
+          label="Readiness score"
+          value={`${rig.optimization.score}/100`}
+          detail={rig.optimization.summary}
+          tone={rig.optimization.score >= 80 ? "positive" : "neutral"}
+        />
+        <MetricCard
+          label="CPU"
+          value={`${rig.cpu.logicalProcessors ?? "?"} threads`}
+          detail={rig.cpu.name}
+          tone="neutral"
+        />
+        <MetricCard
+          label="Memory"
+          value={`${rig.memory.totalGb} GB`}
+          detail="Physical RAM detected"
+          tone={rig.memory.totalGb >= 32 ? "positive" : "neutral"}
+        />
+        <MetricCard
+          label="Primary GPU"
+          value={primaryGpu?.name ?? "Unknown"}
+          detail={primaryGpu?.memoryMb ? `${primaryGpu.memoryMb} MB VRAM` : "No telemetry"}
+          tone={primaryGpu?.vendor === "nvidia" ? "positive" : "neutral"}
+        />
+      </section>
+
+      <section className="dashboard-grid">
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="section-label">Rig configuration</p>
+              <h2>Windows, Salad, WSL, and GPU</h2>
+            </div>
+            <StatusBadge tone={rig.salad.serviceDetected ? "confirmed" : "warning"}>
+              {rig.salad.serviceDetected ? "Bowl service active" : "Service not detected"}
+            </StatusBadge>
+          </div>
+
+          <dl className="definition-list split">
+            <div>
+              <dt>Machine</dt>
+              <dd>
+                {rig.windows.manufacturer} {rig.windows.model}
+              </dd>
+            </div>
+            <div>
+              <dt>Windows</dt>
+              <dd>
+                {rig.windows.name} · {rig.windows.architecture}
+              </dd>
+            </div>
+            <div>
+              <dt>Power plan</dt>
+              <dd>{rig.power.name}</dd>
+            </div>
+            <div>
+              <dt>Virtualization</dt>
+              <dd>
+                {rig.virtualization.hypervisorPresent ? "Hypervisor present" : "Hypervisor not detected"}
+              </dd>
+            </div>
+            <div>
+              <dt>Salad WSL</dt>
+              <dd>
+                {rig.virtualization.saladDistro?.name ?? "salad-enterprise-linux"} ·{" "}
+                {rig.virtualization.saladDistro?.state ?? "unknown"}
+              </dd>
+            </div>
+            <div>
+              <dt>Salad processes</dt>
+              <dd>
+                {rig.salad.processCount} Salad · {rig.salad.workloadProcessCount} workload
+              </dd>
+            </div>
+          </dl>
+
+          <div className="gpu-list">
+            {rig.gpus.map((gpu) => (
+              <article className="gpu-row" key={`${gpu.name}-${gpu.driverVersion}`}>
+                <div>
+                  <strong>{gpu.name}</strong>
+                  <span>
+                    {gpu.vendor} · {gpu.type} · driver {gpu.driverVersion ?? "unknown"}
+                  </span>
+                </div>
+                <div>
+                  <strong>{gpu.memoryMb ? `${gpu.memoryMb} MB` : "Unknown"}</strong>
+                  <span>
+                    {gpu.telemetry
+                      ? `${gpu.telemetry.temperatureC ?? "?"}C · ${gpu.telemetry.utilizationPercent ?? "?"}% util · ${gpu.telemetry.defaultPowerLimitW ?? "?"}W default`
+                      : "No live telemetry"}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <aside className="panel side-panel">
+          <p className="section-label">Max optimization</p>
+          <h2>Availability plan</h2>
+          <p className="body-copy">
+            Generate a hardware-aware plan for maximum Salad job availability. This
+            does not change Windows, NVIDIA, WSL, or Salad settings automatically.
+          </p>
+          <button className="primary-button" type="button" onClick={onOptimize}>
+            {isOptimizing ? "Analyzing..." : "Generate max plan"}
+          </button>
+          <OptimizationActions actions={(plan?.actions ?? rig.optimization.actions)} />
+        </aside>
+      </section>
+    </>
+  );
+}
+
+function OptimizationActions({ actions }) {
+  if (actions.length === 0) {
+    return <p className="empty-state">No optimization actions are available yet.</p>;
+  }
+
+  return (
+    <div className="action-list">
+      {actions.map((action) => (
+        <article className={`action-item ${action.status}`} key={action.id}>
+          <div>
+            <strong>{action.title}</strong>
+            <span>{action.detail}</span>
+          </div>
+          <StatusBadge tone={action.status === "ready" ? "confirmed" : action.status}>
+            {action.impact}
+          </StatusBadge>
+        </article>
+      ))}
+    </div>
   );
 }
 

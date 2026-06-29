@@ -375,3 +375,40 @@ Next suggested step:
 
 - Add parser signal patterns from SaladBowl or WSL job lifecycle logs once real
   examples are identified.
+
+## 2026-06-28 - Block 011: Rig Readiness And Optimization Plan
+
+Branch:
+
+- `main`
+
+Current state:
+
+- The helper exposes `/salad/rig/config` for Windows, CPU, memory, GPU, power
+  plan, WSL, Salad process, and elevation inspection.
+- The helper exposes `/salad/rig/optimize` for an advisory maximum-availability
+  optimization plan.
+- The dashboard has a Rig tab with readiness score, hardware cards, WSL/Salad
+  runtime state, GPU telemetry, and optimization actions.
+- The monitor and existing dashboard remain read-only for system changes.
+- Version moved to `0.8.0`.
+
+Decisions:
+
+- Keep optimization advisory by default. Do not change Windows power policy,
+  NVIDIA settings, WSL, or Salad automatically without a later explicit
+  confirmation flow.
+- Treat dedicated NVIDIA GPU, 32 GB or more RAM, WSL/virtualization readiness,
+  and active Bowl service as readiness signals.
+
+Risks:
+
+- GPU telemetry depends on `nvidia-smi`; AMD/iGPU telemetry is currently limited
+  to Windows controller metadata.
+- Applying optimizations safely will require per-action validation and rollback
+  behavior.
+
+Next suggested step:
+
+- Add explicit, reversible apply flows for selected optimization actions,
+  beginning with Windows power-plan switching.

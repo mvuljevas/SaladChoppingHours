@@ -153,6 +153,26 @@ Resolution path:
 - Replace or refine inferred activity when SaladBowl, NDM, or WSL lifecycle log
   patterns are validated as reliable Chopping start/stop signals.
 
+## TD-010: Optimization Plan Is Advisory
+
+Status: open.
+
+Context:
+
+- The Rig view generates max-availability recommendations from detected
+  hardware, Windows power state, WSL readiness, GPU telemetry, and Salad
+  processes.
+
+Impact:
+
+- The app can guide optimization, but it does not yet apply Windows power,
+  NVIDIA, WSL, or Salad setting changes automatically.
+
+Resolution path:
+
+- Add explicit confirmation flows per action, starting with reversible Windows
+  power-plan changes and keeping elevated operations isolated to the helper.
+
 ## TD-008: Multi-PC Totals Need Import Workflow
 
 Status: open.

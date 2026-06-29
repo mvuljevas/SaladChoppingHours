@@ -202,9 +202,22 @@ h2 {
 
 .status-badge.warning,
 .status-badge.low-confidence,
-.status-badge.inferred {
+.status-badge.inferred,
+.status-badge.recommended,
+.status-badge.optional,
+.status-badge.info {
   background: #332712;
   color: #ffcf70;
+}
+
+.status-badge.blocked {
+  background: #3b1d1d;
+  color: #ff8a8a;
+}
+
+.status-badge.ready {
+  background: rgb(201 255 55 / 14%);
+  color: #c9ff37;
 }
 
 .dashboard-grid {
@@ -308,6 +321,10 @@ h2 {
   margin: 18px 0 0;
 }
 
+.definition-list.split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .definition-list div {
   border-top: 1px solid #17394d;
   padding-top: 12px;
@@ -321,6 +338,58 @@ h2 {
 .definition-list dd {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
+}
+
+.gpu-list,
+.action-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.gpu-row,
+.action-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid #17394d;
+  border-radius: 8px;
+  background: #071724;
+  padding: 14px;
+}
+
+.gpu-row strong,
+.gpu-row span,
+.action-item strong,
+.action-item span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.gpu-row strong,
+.action-item strong {
+  color: #f4fff8;
+  font-size: 15px;
+}
+
+.gpu-row span,
+.action-item span {
+  margin-top: 5px;
+  color: #9ab0bd;
+  line-height: 1.5;
+}
+
+.action-item.recommended {
+  border-color: #4b6a16;
+}
+
+.action-item.blocked {
+  border-color: #805d19;
+}
+
+.action-item.ready {
+  border-color: #356f36;
 }
 
 .log-errors {
@@ -459,5 +528,11 @@ h2 {
   .terminal-line {
     grid-template-columns: 1fr;
     gap: 2px;
+  }
+
+  .definition-list.split,
+  .gpu-row,
+  .action-item {
+    grid-template-columns: 1fr;
   }
 }
