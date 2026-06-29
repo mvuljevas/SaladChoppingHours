@@ -61,6 +61,8 @@ On Windows, the suite checks administrator status before opening ports. If the
 current terminal is not elevated, it requests a native UAC relaunch and runs the
 UI, helper, and monitor from the elevated process. Use `Ctrl+C` in the elevated
 terminal to stop all three.
+The suite opens `http://127.0.0.1:5173/` in the default browser after Vite is
+ready. Set `SALAD_OPEN_BROWSER=0` to disable this for scripted runs.
 
 ```bash
 npm run dev

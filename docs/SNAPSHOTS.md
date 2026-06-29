@@ -448,3 +448,31 @@ Next suggested step:
 
 - Add a packaged Windows launch strategy once the app moves beyond the dev
   suite.
+
+## 2026-06-28 - Block 013: Suite Browser Auto-Open
+
+Branch:
+
+- `main`
+
+Current state:
+
+- `npm run suite` opens `http://127.0.0.1:5173/` in the default browser after
+  Vite is ready.
+- Browser auto-open can be disabled with `SALAD_OPEN_BROWSER=0`.
+- Version moved to `0.8.2`.
+
+Decisions:
+
+- Keep browser launching in `src/dev/suite.js` so it works for the elevated
+  relaunch flow and `suite:ui`.
+
+Risks:
+
+- Browser auto-open uses platform shell helpers and may fail on unusual desktop
+  environments; the suite prints the URL manually if that happens.
+
+Next suggested step:
+
+- Add a packaged Windows launch strategy once the app moves beyond the dev
+  suite.
