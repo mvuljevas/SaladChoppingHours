@@ -1,14 +1,18 @@
 const timestampPattern =
   /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d{3}) ([+-]\d{2}):(\d{2})/;
 const miningSignalPattern = /\bMining at\b/i;
-const defaultSampleSeconds = 30;
+const defaultSignalDurationSeconds = 30;
 const maxSignalGapSeconds = 120;
+const starChefTargetHours = 50;
 
 export function calculateChoppingSummary(logWindows, now = new Date(), days = 7) {
   const signals = collectMiningSignals(logWindows);
   const intervals = buildIntervals(signals);
   const history = buildHistory(intervals, now, days);
   const totalHours = history.reduce((total, item) => total + item.hours, 0);
+  const last24Hours = calculateWindowHours(intervals, addHours(now, -24), now);
+  const rolling7DaysHours = calculateWindowHours(intervals, addDays(now, -7), now);
+  const starChefProgress = Math.min((rolling7DaysHours / starChefTargetHours) * 100, 100);
 
   return {
     source: signals.length > 0 ? "logs" : "none",
@@ -16,6 +20,15 @@ export function calculateChoppingSummary(logWindows, now = new Date(), days = 7)
     signalCount: signals.length,
     intervalCount: intervals.length,
     totalHours: roundHours(totalHours),
+    last24Hours: roundHours(last24Hours),
+    rolling7DaysHours: roundHours(rolling7DaysHours),
+    starChefEstimate: {
+      targetHours: starChefTargetHours,
+      progress: Math.round(starChefProgress),
+      remainingHours: roundHours(Math.max(starChefTargetHours - rolling7DaysHours, 0)),
+      window: "rolling-7-days-estimate",
+      note: "Salad documents 3000 minutes per week but does not publish the exact qualification date window.",
+    },
     intervals: intervals.map((interval) => ({
       start: interval.start.toISOString(),
       end: interval.end.toISOString(),
@@ -64,7 +77,7 @@ function buildIntervals(signals) {
 
   const intervals = [];
   let start = signals[0].timestamp;
-  let end = addSeconds(signals[0].timestamp, defaultSampleSeconds);
+  let end = addSeconds(signals[0].timestamp, defaultSignalDurationSeconds);
 
   for (const signal of signals.slice(1)) {
     const gapSeconds = (signal.timestamp - end) / 1000;
@@ -74,7 +87,7 @@ function buildIntervals(signals) {
       start = signal.timestamp;
     }
 
-    end = addSeconds(signal.timestamp, defaultSampleSeconds);
+    end = addSeconds(signal.timestamp, defaultSignalDurationSeconds);
   }
 
   intervals.push({ start, end, confidence: "confirmed" });
@@ -113,6 +126,14 @@ function overlapSeconds(interval, windowStart, windowEnd) {
   return Math.max(0, (end - start) / 1000);
 }
 
+function calculateWindowHours(intervals, windowStart, windowEnd) {
+  const seconds = intervals.reduce(
+    (total, interval) => total + overlapSeconds(interval, windowStart, windowEnd),
+    0,
+  );
+  return seconds / 3600;
+}
+
 function parseLogTimestamp(line) {
   const match = line.match(timestampPattern);
 
@@ -140,6 +161,10 @@ function addDays(value, days) {
   const next = new Date(value);
   next.setDate(next.getDate() + days);
   return next;
+}
+
+function addHours(value, hours) {
+  return new Date(value.getTime() + hours * 60 * 60 * 1000);
 }
 
 function addSeconds(value, seconds) {

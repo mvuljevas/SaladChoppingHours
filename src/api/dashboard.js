@@ -1,4 +1,8 @@
-import { sampleDashboard } from "../data/sampleDashboard.js";
+import {
+  emptyChoppingSummary,
+  emptyDashboard,
+  emptyStatus,
+} from "../data/emptyDashboard.js";
 
 const helperBaseUrl = import.meta.env.VITE_HELPER_URL ?? "http://127.0.0.1:48173";
 
@@ -13,23 +17,23 @@ export async function loadDashboardData() {
       fetchJson("/salad/report"),
     ]);
 
+    const choppingSummary = normalizeChoppingSummary(history);
+
     return {
-      ...sampleDashboard,
+      ...emptyDashboard,
       source: "helper",
       helperOnline: health.ok === true,
       status: normalizeStatus(status),
       workload,
-      choppingHistory: history.history?.length
-        ? history.history
-        : sampleDashboard.choppingHistory,
-      choppingSummary: history,
+      choppingHistory: history.history ?? [],
+      choppingSummary,
       report,
-      recentEvents: buildRecentEvents(status, logs.logs ?? [], history),
+      recentEvents: buildRecentEvents(status, logs.logs ?? [], choppingSummary),
       logs: logs.logs ?? [],
     };
   } catch (error) {
     return {
-      ...sampleDashboard,
+      ...emptyDashboard,
       error: error instanceof Error ? error.message : "Helper unavailable",
     };
   }
@@ -70,9 +74,26 @@ async function fetchJson(path) {
   return response.json();
 }
 
+function normalizeChoppingSummary(history) {
+  return {
+    ...emptyChoppingSummary,
+    ...history,
+    coverage: {
+      ...emptyChoppingSummary.coverage,
+      ...(history.coverage ?? {}),
+    },
+    starChefEstimate: {
+      ...emptyChoppingSummary.starChefEstimate,
+      ...(history.starChefEstimate ?? {}),
+    },
+    intervals: history.intervals ?? emptyChoppingSummary.intervals,
+    history: history.history ?? emptyChoppingSummary.history,
+  };
+}
+
 function normalizeStatus(status) {
   return {
-    installPath: status.installPath ?? sampleDashboard.status.installPath,
+    installPath: status.installPath ?? emptyStatus.installPath,
     installPathExists: status.installPathExists ?? false,
     process: status.process ?? {
       label: "Unknown",
@@ -89,9 +110,9 @@ function normalizeStatus(status) {
       state: "unknown",
       detected: false,
     },
-    machine: status.machine ?? sampleDashboard.status.machine,
-    elevation: status.elevation ?? sampleDashboard.status.elevation,
-    wsl: status.wsl ?? sampleDashboard.status.wsl,
+    machine: status.machine ?? emptyStatus.machine,
+    elevation: status.elevation ?? emptyStatus.elevation,
+    wsl: status.wsl ?? emptyStatus.wsl,
     lastLogRead: status.lastLogRead ?? "No logs read",
   };
 }

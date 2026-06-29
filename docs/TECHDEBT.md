@@ -81,7 +81,7 @@ Status: resolved.
 
 Context:
 
-- The first dashboard screen uses structured sample values for process status,
+- The first dashboard screen used structured placeholder values for process status,
   workload status, Chopping history, and recent events.
 
 Impact:
@@ -91,8 +91,8 @@ Impact:
 
 Resolution path:
 
-- Implemented with `/salad/chopping-history`; sample data remains as offline
-  fallback.
+- Implemented with `/salad/chopping-history`; offline helper state now uses
+  explicit empty values instead of fabricated demo values.
 
 ## TD-006: Process Detection Is Heuristic
 

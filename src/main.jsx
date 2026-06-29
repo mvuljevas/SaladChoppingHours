@@ -1,25 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   loadDashboardData,
   requestElevatedHelper,
   subscribeToEvents,
 } from "./api/dashboard.js";
-import { sampleDashboard, starChefTargetHours } from "./data/sampleDashboard.js";
+import { emptyDashboard, starChefTargetHours } from "./data/emptyDashboard.js";
 import "./styles.css";
 
-const tabs = ["Overview", "Live Monitor", "Logs & Coverage", "Machines", "Settings"];
+const tabs = ["Overview", "Live Monitor", "Coverage", "Machines", "Settings"];
 
 function App() {
-  const [dashboard, setDashboard] = useState(sampleDashboard);
+  const [dashboard, setDashboard] = useState(emptyDashboard);
   const [activeTab, setActiveTab] = useState("Overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [liveEvents, setLiveEvents] = useState([]);
   const { choppingHistory, choppingSummary, status, workload, source, logs, error } =
     dashboard;
-  const weeklyHours = choppingHistory.reduce((total, item) => total + item.hours, 0);
-  const progress = Math.min((weeklyHours / starChefTargetHours) * 100, 100);
-  const remainingHours = Math.max(starChefTargetHours - weeklyHours, 0);
+  const starChef = choppingSummary.starChefEstimate;
   const coverage = choppingSummary.coverage ?? {};
   const machineLabel = `${status.machine?.hostname ?? "This PC"} · ${status.machine?.id ?? "unknown"}`;
 
@@ -32,12 +30,13 @@ function App() {
   async function elevateHelper() {
     await requestElevatedHelper();
     setLiveEvents((events) => [
+      ...events,
       {
         observedAt: new Date().toISOString(),
         source: "settings",
+        level: "info",
         message: "Requested elevated helper through Windows UAC.",
       },
-      ...events,
     ]);
   }
 
@@ -51,44 +50,45 @@ function App() {
     }
 
     return subscribeToEvents((event) => {
-      setLiveEvents((events) => [event, ...events].slice(0, 80));
+      setLiveEvents((events) => [...events, event].slice(-160));
     });
   }, [source]);
 
-  const dashboardEvents = useMemo(
-    () =>
-      liveEvents.length > 0
-        ? liveEvents
-        : dashboard.recentEvents.map((event) => ({
-            observedAt: event.time,
-            source: event.source,
-            message: event.message,
-          })),
-    [dashboard.recentEvents, liveEvents],
-  );
+  const terminalEvents = useMemo(() => {
+    if (liveEvents.length > 0) {
+      return liveEvents;
+    }
+
+    return dashboard.recentEvents.map((event) => ({
+      observedAt: event.time,
+      source: event.source,
+      message: event.message,
+    }));
+  }, [dashboard.recentEvents, liveEvents]);
 
   return (
     <main className="app-shell">
-      <header className="hero">
+      <header className="app-header">
         <div>
           <p className="eyebrow">SaladChoppingHours</p>
-          <h1>Chopping truth from local signals.</h1>
+          <h1>Local Chopping observability</h1>
           <p className="hero-copy">
-            Weekly Star Chef progress is local and source-labelled. Lifetime Salad
-            totals stay separate from this 7-day machine view.
+            Salad documents Star Chef as 3000 minutes per week, but does not publish
+            the exact qualification date window. This dashboard shows local 24h,
+            rolling 7-day, and estimated Star Chef progress separately.
           </p>
         </div>
-        <div className="hero-actions">
-          <span className={source === "helper" ? "source-pill live" : "source-pill"}>
-            {source === "helper" ? "Helper online" : "Sample fallback"}
-          </span>
+        <div className="header-actions">
+          <StatusBadge tone={source === "helper" ? "confirmed" : "warning"}>
+            {source === "helper" ? "Helper connected" : "Helper offline"}
+          </StatusBadge>
           <button className="primary-button" type="button" onClick={refreshDashboard}>
-            {isRefreshing ? "Scanning..." : "Refresh"}
+            {isRefreshing ? "Refreshing..." : "Refresh data"}
           </button>
         </div>
       </header>
 
-      <nav className="tabs" aria-label="Dashboard views">
+      <nav className="tabs" aria-label="Dashboard sections">
         {tabs.map((tab) => (
           <button
             className={activeTab === tab ? "tab active" : "tab"}
@@ -101,28 +101,26 @@ function App() {
         ))}
       </nav>
 
-      {error ? <p className="warning-banner">{error}</p> : null}
+      {error ? <p className="notice error">{error}</p> : null}
 
       {activeTab === "Overview" ? (
         <Overview
           coverage={coverage}
+          history={choppingHistory}
           machineLabel={machineLabel}
-          progress={progress}
-          remainingHours={remainingHours}
+          starChef={starChef}
           status={status}
           summary={choppingSummary}
-          weeklyHours={weeklyHours}
           workload={workload}
-          history={choppingHistory}
         />
       ) : null}
 
       {activeTab === "Live Monitor" ? (
-        <LiveMonitor events={dashboardEvents} source={source} />
+        <LiveMonitor events={terminalEvents} source={source} />
       ) : null}
 
-      {activeTab === "Logs & Coverage" ? (
-        <LogsCoverage coverage={coverage} logs={logs} summary={choppingSummary} />
+      {activeTab === "Coverage" ? (
+        <Coverage coverage={coverage} logs={logs} summary={choppingSummary} />
       ) : null}
 
       {activeTab === "Machines" ? (
@@ -136,37 +134,33 @@ function App() {
   );
 }
 
-function Overview({
-  coverage,
-  machineLabel,
-  progress,
-  remainingHours,
-  status,
-  summary,
-  weeklyHours,
-  workload,
-  history,
-}) {
+function Overview({ coverage, history, machineLabel, starChef, status, summary, workload }) {
   return (
     <>
       <section className="metric-grid" aria-label="Current Salad status">
-        <StatusCard label="This PC" value={machineLabel} detail={status.installPath} />
-        <StatusCard
-          label="Salad process"
-          value={status.process.label}
-          detail={status.service?.label}
-          tone={status.process.detected ? "positive" : "neutral"}
+        <MetricCard
+          label="Last 24 hours"
+          value={`${summary.last24Hours.toFixed(1)}h`}
+          detail="Rolling local log estimate"
+          tone="accent"
         />
-        <StatusCard
-          label="Active workload"
+        <MetricCard
+          label="Rolling 7 days"
+          value={`${summary.rolling7DaysHours.toFixed(1)}h`}
+          detail={`${summary.signalCount} signals · ${summary.intervalCount} intervals`}
+          tone="accent"
+        />
+        <MetricCard
+          label="Star Chef estimate"
+          value={`${starChef.progress}%`}
+          detail={`${starChef.remainingHours.toFixed(1)}h remaining to ${starChefTargetHours}h`}
+          tone={starChef.progress >= 100 ? "positive" : "neutral"}
+        />
+        <MetricCard
+          label="Current workload"
           value={workload.label}
           detail={`${workload.source} · ${workload.confidence}`}
           tone={workload.confidence === "confirmed" ? "positive" : "neutral"}
-        />
-        <StatusCard
-          label="Star Chef gap"
-          value={`${remainingHours.toFixed(1)}h`}
-          detail={`${weeklyHours.toFixed(1)}h of ${starChefTargetHours}h tracked`}
         />
       </section>
 
@@ -174,26 +168,39 @@ function Overview({
         <section className="panel chart-panel" aria-labelledby="history-heading">
           <div className="panel-heading">
             <div>
-              <p className="section-label">Local 7-day Chopping history</p>
-              <h2 id="history-heading">0-24h per day</h2>
+              <p className="section-label">Daily local history</p>
+              <h2 id="history-heading">Last 7 calendar days</h2>
             </div>
-            <span className="target-pill">{progress.toFixed(0)}% of Star Chef</span>
+            <StatusBadge tone={summary.confidence}>{summary.confidence}</StatusBadge>
           </div>
           <ChoppingChart data={history} />
         </section>
 
-        <aside className="panel summary-panel" aria-labelledby="summary-heading">
-          <p className="section-label">Weekly summary</p>
-          <h2 id="summary-heading">{weeklyHours.toFixed(1)}h</h2>
-          <div className="progress-track" aria-label="Star Chef progress">
-            <span style={{ width: `${progress}%` }} />
+        <aside className="panel side-panel" aria-labelledby="truth-heading">
+          <p className="section-label">What this number means</p>
+          <h2 id="truth-heading">Source-labelled estimate</h2>
+          <div className="progress-track" aria-label="Estimated Star Chef progress">
+            <span style={{ width: `${Math.min(starChef.progress, 100)}%` }} />
           </div>
-          <Badge tone={summary.confidence}>{summary.confidence}</Badge>
-          <p className="summary-copy">
-            {summary.signalCount} signals, {summary.intervalCount} intervals,{" "}
-            {coverage.parsedLogCount ?? 0} parsed logs. Last signal:{" "}
-            {formatDateTime(summary.lastSignalAt)}.
-          </p>
+          <p className="body-copy">{starChef.note}</p>
+          <dl className="definition-list">
+            <div>
+              <dt>Machine</dt>
+              <dd>{machineLabel}</dd>
+            </div>
+            <div>
+              <dt>Logs parsed</dt>
+              <dd>{coverage.parsedLogCount ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Last signal</dt>
+              <dd>{formatDateTime(summary.lastSignalAt)}</dd>
+            </div>
+            <div>
+              <dt>Salad process</dt>
+              <dd>{status.process.label}</dd>
+            </div>
+          </dl>
         </aside>
       </section>
     </>
@@ -201,47 +208,74 @@ function Overview({
 }
 
 function LiveMonitor({ events, source }) {
+  const terminalRef = useRef(null);
+
+  useEffect(() => {
+    terminalRef.current?.scrollTo({
+      top: terminalRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [events]);
+
   return (
-    <section className="panel">
+    <section className="panel terminal-panel">
       <div className="panel-heading">
         <div>
-          <p className="section-label">Live Monitor</p>
-          <h2>Real-time local observations</h2>
+          <p className="section-label">Live monitor</p>
+          <h2>Terminal stream</h2>
         </div>
-        <Badge tone={source === "helper" ? "confirmed" : "low-confidence"}>
-          {source === "helper" ? "SSE connected" : "helper offline"}
-        </Badge>
+        <StatusBadge tone={source === "helper" ? "confirmed" : "warning"}>
+          {source === "helper" ? "Streaming" : "Waiting for helper"}
+        </StatusBadge>
       </div>
-      <ol className="console-list">
-        {events.map((event, index) => (
-          <li key={`${event.observedAt}-${index}`}>
-            <time>{formatDateTime(event.observedAt)}</time>
-            <strong>{event.source ?? "event"}</strong>
-            <span>{formatEventMessage(event)}</span>
-          </li>
-        ))}
-      </ol>
+      <div className="terminal" ref={terminalRef}>
+        {events.length === 0 ? (
+          <TerminalLine
+            event={{
+              observedAt: new Date().toISOString(),
+              source: "system",
+              message: "No events yet. Start the helper or refresh the dashboard.",
+            }}
+          />
+        ) : (
+          events.map((event, index) => (
+            <TerminalLine event={event} key={`${event.observedAt}-${index}`} />
+          ))
+        )}
+      </div>
     </section>
   );
 }
 
-function LogsCoverage({ coverage, logs, summary }) {
+function TerminalLine({ event }) {
+  const type = event.source ?? inferEventType(event);
+
+  return (
+    <div className={`terminal-line ${type}`}>
+      <time>{formatTerminalTime(event.observedAt)}</time>
+      <span className="terminal-type">{type}</span>
+      <span>{formatEventMessage(event)}</span>
+    </div>
+  );
+}
+
+function Coverage({ coverage, logs, summary }) {
   return (
     <section className="panel">
       <div className="panel-heading">
         <div>
-          <p className="section-label">Logs & Coverage</p>
-          <h2>Source coverage and retention</h2>
+          <p className="section-label">Coverage</p>
+          <h2>Local evidence and retention</h2>
         </div>
-        <Badge tone={summary.confidence}>{summary.confidence}</Badge>
+        <StatusBadge tone={summary.confidence}>{summary.confidence}</StatusBadge>
       </div>
-      <div className="coverage-grid">
-        <StatusCard label="Log files" value={String(coverage.logCount ?? logs.length)} />
-        <StatusCard label="Parsed miner logs" value={String(coverage.parsedLogCount ?? 0)} />
-        <StatusCard label="Newest log" value={formatDateTime(coverage.newestLogAt)} />
-        <StatusCard label="Oldest log" value={formatDateTime(coverage.oldestLogAt)} />
+      <div className="metric-grid compact">
+        <MetricCard label="Log files" value={String(coverage.logCount ?? logs.length)} />
+        <MetricCard label="Parsed miner logs" value={String(coverage.parsedLogCount ?? 0)} />
+        <MetricCard label="Newest log" value={formatDateTime(coverage.newestLogAt)} />
+        <MetricCard label="Oldest log" value={formatDateTime(coverage.oldestLogAt)} />
       </div>
-      <p className="summary-copy">{coverage.retentionNote}</p>
+      <p className="body-copy">{coverage.retentionNote}</p>
     </section>
   );
 }
@@ -252,14 +286,14 @@ function Machines({ report, status }) {
       <div className="panel-heading">
         <div>
           <p className="section-label">Machines</p>
-          <h2>Local-first multi-PC model</h2>
+          <h2>Local report</h2>
         </div>
       </div>
-      <div className="coverage-grid">
-        <StatusCard label="Current machine" value={status.machine?.hostname ?? "This PC"} />
-        <StatusCard label="Machine ID" value={status.machine?.id ?? "unknown"} />
-        <StatusCard label="Exportable report" value={report ? "Ready" : "Unavailable"} />
-        <StatusCard label="Combined total" value="Next block" detail="Import second PC JSON" />
+      <div className="metric-grid compact">
+        <MetricCard label="Current machine" value={status.machine?.hostname ?? "This PC"} />
+        <MetricCard label="Machine ID" value={status.machine?.id ?? "unknown"} />
+        <MetricCard label="Report export" value={report ? "Available" : "Unavailable"} />
+        <MetricCard label="Multi-PC total" value="Not enabled" detail="Import is a later block" />
       </div>
     </section>
   );
@@ -273,13 +307,13 @@ function Settings({ status, onElevate }) {
           <p className="section-label">Settings</p>
           <h2>Helper permissions</h2>
         </div>
-        <Badge tone={status.elevation?.isAdmin ? "confirmed" : "low-confidence"}>
+        <StatusBadge tone={status.elevation?.isAdmin ? "confirmed" : "warning"}>
           {status.elevation?.level ?? "unknown"}
-        </Badge>
+        </StatusBadge>
       </div>
-      <p className="summary-copy">
-        The browser UI stays normal. If Windows hides process paths or WSL details,
-        relaunch only the helper through UAC.
+      <p className="body-copy">
+        The UI stays non-elevated. If Windows hides process paths, WSL details, or
+        service metadata, relaunch only the helper through UAC.
       </p>
       <button className="primary-button" type="button" onClick={onElevate}>
         Run helper as administrator
@@ -288,22 +322,26 @@ function Settings({ status, onElevate }) {
   );
 }
 
-function StatusCard({ label, value, detail, tone = "neutral" }) {
+function MetricCard({ label, value, detail, tone = "neutral" }) {
   return (
-    <article className="metric-card">
+    <article className={`metric-card ${tone}`}>
       <p>{label}</p>
-      <strong className={tone === "positive" ? "positive" : undefined}>{value}</strong>
+      <strong>{value}</strong>
       {detail ? <span>{detail}</span> : null}
     </article>
   );
 }
 
-function Badge({ children, tone = "neutral" }) {
-  return <span className={`badge ${tone}`}>{children}</span>;
+function StatusBadge({ children, tone = "neutral" }) {
+  return <span className={`status-badge ${tone}`}>{children}</span>;
 }
 
 function ChoppingChart({ data }) {
   const maxHours = 24;
+
+  if (data.length === 0) {
+    return <p className="empty-state">No local log history is available yet.</p>;
+  }
 
   return (
     <div className="chart" role="img" aria-label="Bar chart of Chopping hours by day">
@@ -336,10 +374,6 @@ function formatDateTime(value) {
     return "Unknown";
   }
 
-  if (value === "Sample data" || value === "Now" || value === "Yesterday") {
-    return value;
-  }
-
   const timestamp = new Date(value);
 
   if (Number.isNaN(timestamp.getTime())) {
@@ -352,13 +386,39 @@ function formatDateTime(value) {
   }).format(timestamp);
 }
 
+function formatTerminalTime(value) {
+  const timestamp = new Date(value);
+
+  if (Number.isNaN(timestamp.getTime())) {
+    return "--:--:--";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(timestamp);
+}
+
+function inferEventType(event) {
+  if (event.parser) {
+    return "parser";
+  }
+
+  if (event.workload) {
+    return "job";
+  }
+
+  return "system";
+}
+
 function formatEventMessage(event) {
   if (event.message) {
     return event.message;
   }
 
   if (event.parser) {
-    return `${event.parser.totalHours.toFixed(2)}h, ${event.parser.signalCount} signals, workload ${event.workload?.label}`;
+    return `${event.parser.totalHours.toFixed(2)}h · ${event.parser.signalCount} signals · ${event.workload?.label ?? "unknown workload"}`;
   }
 
   return "Observation received";

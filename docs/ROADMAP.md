@@ -20,8 +20,9 @@ Status: complete.
 ## Phase 2: Core Calculation
 
 - Add a narrow read-only local helper skeleton.
-- Add bounded sample log access for parser development.
-- Replace dashboard sample data with parsed helper responses.
+- Add bounded anonymized log fixtures for parser development.
+- Replace dashboard placeholders with parsed helper responses and explicit empty
+  offline states.
 - Parse Salad start and stop status events.
 - Collapse duplicate state transitions.
 - Reconstruct Chopping intervals.
@@ -34,14 +35,15 @@ Status: started.
 
 - Show active/inactive Salad status.
 - Show current workload status when available.
-- Show Chopping totals and qualification summary.
-- Show source log window and last relevant events.
+- Show Chopping totals, last-24-hours, rolling-7-days, and qualification
+  estimate.
+- Show source log window and terminal-style live events.
 
 Status: started.
 
 ## Phase 4: Verification and Packaging
 
-- Add sample anonymized fixtures.
+- Add anonymized fixtures.
 - Add parser and calculation tests.
 - Add local run instructions.
 - Decide whether to package as PWA, desktop wrapper, or local service.

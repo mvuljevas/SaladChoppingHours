@@ -148,7 +148,7 @@ Current state:
 - The React/Vite app now shows an initial dashboard prototype.
 - The dashboard presents Salad installation folder, process status, workload
   status, weekly Chopping history, Star Chef progress, and recent signals.
-- Values are structured sample data only; no Salad filesystem access, helper
+- Values are structured placeholder data only; no Salad filesystem access, helper
   API, process detection, or log parser has been implemented yet.
 - Version moved to `0.2.0`.
 
@@ -166,7 +166,7 @@ Risks:
 
 Next suggested step:
 
-- Add the read-only local helper skeleton and replace dashboard sample data with
+- Add the read-only local helper skeleton and replace dashboard placeholders with
   bounded helper responses.
 
 ## 2026-06-28 - Block 005: Local Helper Skeleton
@@ -181,8 +181,8 @@ Current state:
 - The helper exposes `/health`, `/salad/status`, `/salad/logs`, and
   `/salad/logs/:id/window`.
 - The dashboard loads helper status and log metadata when the helper is
-  available, with structured sample data as fallback.
-- Chopping-hour history is still sample data; log parsing and interval
+  available, with structured placeholder data as fallback.
+- Chopping-hour history is still placeholder data; log parsing and interval
   calculation have not been implemented.
 - Version moved to `0.3.0`.
 
@@ -216,7 +216,7 @@ Current state:
 - The helper exposes `/salad/chopping-history`.
 - Chopping history is calculated from miner log lines containing `Mining at`.
 - The dashboard uses helper-provided history when available and keeps sample
-  data only as offline fallback.
+  placeholder data only as offline fallback.
 - The chart scale is fixed at `0h` to `24h` so labels remain visible when a day
   approaches the maximum.
 - Version moved to `0.4.0`.
@@ -299,3 +299,38 @@ Next suggested step:
 
 - Improve the Machines view with import of a second PC report when multi-PC
   totals become a priority.
+
+## 2026-06-28 - Block 009: No-Sample Dashboard UX
+
+Branch:
+
+- `main`
+
+Current state:
+
+- The dashboard no longer uses fabricated demo data when the helper is
+  offline.
+- The UI presents last-24-hours, rolling-7-days, and estimated Star Chef
+  progress as separate values with source, confidence, and coverage context.
+- The Live Monitor view is now a terminal-style stream with newest events at
+  the bottom, automatic scroll, and event colors by source/type.
+- Navigation uses professional tab styling instead of pill controls.
+- Version moved to `0.7.0`.
+
+Decisions:
+
+- Treat Salad's 3000-minute weekly Star Chef rule as a 50-hour threshold while
+  showing the local app's calculation as a rolling 7-day estimate until Salad
+  publishes a more exact qualification window.
+- Show empty/offline state explicitly rather than implying real account data.
+
+Risks:
+
+- The rolling 7-day Star Chef estimate still needs validation against real
+  Salad account behavior.
+- Parser accuracy still depends on additional real-world log validation.
+
+Next suggested step:
+
+- Validate the rolling 7-day total against a real Salad machine with known
+  recent Chopping sessions.

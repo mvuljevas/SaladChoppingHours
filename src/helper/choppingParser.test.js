@@ -6,7 +6,7 @@ test("calculates one continuous mining interval", () => {
   const summary = calculateChoppingSummary(
     [
       {
-        relativePath: "logs\\T-Rex\\sample.log",
+        relativePath: "logs\\T-Rex\\fixture.log",
         lines: [
           "2026-06-27 10:00:00.000 -03:00 [INF] Mining at pool",
           "2026-06-27 10:00:30.000 -03:00 [INF] Mining at pool",
@@ -21,13 +21,15 @@ test("calculates one continuous mining interval", () => {
   assert.equal(summary.intervalCount, 1);
   assert.equal(summary.history.find((day) => day.isoDate === "2026-06-27").hours, 0.03);
   assert.equal(summary.confidence, "confirmed");
+  assert.equal(summary.last24Hours, 0);
+  assert.equal(summary.starChefEstimate.targetHours, 50);
 });
 
 test("splits intervals when mining signals have a large gap", () => {
   const summary = calculateChoppingSummary(
     [
       {
-        relativePath: "logs\\Rigel\\sample.log",
+        relativePath: "logs\\Rigel\\fixture.log",
         lines: [
           "2026-06-27 10:00:00.000 -03:00 [INF] Mining at pool",
           "2026-06-27 10:00:30.000 -03:00 [INF] Mining at pool",

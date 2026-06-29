@@ -17,12 +17,16 @@ status.
 
 The helper can report health, inspect known Salad processes, list bounded Salad
 log metadata, read bounded log windows, and calculate recent Chopping-hour
-history from miner log signals. The dashboard falls back to structured sample
-data when the helper is not running.
+history from miner log signals. When the helper is not running, the dashboard
+shows an explicit empty/offline state instead of fabricated sample values.
 
 The dashboard separates local 7-day Chopping history from Salad lifetime totals.
 Displayed hour values include source, confidence, and coverage context so
 partial local logs are not presented as complete account history.
+It also keeps last-24-hours, rolling-7-days, and estimated Star Chef progress as
+separate values. Salad documents the Star Chef threshold as 3000 minutes per
+week; this app uses a rolling 7-day estimate unless Salad publishes a more exact
+qualification window.
 
 ## Requirements
 
